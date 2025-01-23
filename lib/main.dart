@@ -18,7 +18,7 @@ class Entry extends StatefulWidget {
 class _EntryState extends State<Entry> {
   @override
   Widget build(BuildContext context) {
-    var router = GoRouter(routes: [
+    var router = GoRouter(initialLocation: "/sign-up", routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(
           path: '/sign-in', builder: (context, state) => const SignInScreen()),

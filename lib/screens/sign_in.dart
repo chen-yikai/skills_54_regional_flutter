@@ -9,6 +9,7 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
+  var hidePassword = true;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,15 +28,23 @@ class _SignInScreenState extends State<SignInScreen> {
             SizedBox(height: 50),
             TextField(
               decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: "帳號",
+                labelText: "帳號(Email)",
               ),
             ),
             SizedBox(height: 20),
             TextField(
+              obscureText: hidePassword,
+              obscuringCharacter: '*',
               decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: "密碼",
+                labelText: "主密碼",
+                suffixIcon: IconButton(
+                    icon: Icon(
+                        hidePassword ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () {
+                      setState(() {
+                        hidePassword = !hidePassword;
+                      });
+                    }),
               ),
             ),
             SizedBox(height: 20),
