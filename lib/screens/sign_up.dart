@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:skills_54_regional_flutter/db.dart';
 import 'package:skills_54_regional_flutter/util.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -11,15 +12,13 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   var hidePassword = true, hideConfirmPassword = true;
-
   var name = TextEditingController(),
       email = TextEditingController(),
       passwordCofirm = TextEditingController(),
       password = TextEditingController();
-
   var emailError = false, passwordError = false, confirmPasswordError = false;
 
-  samePassword(String _) {
+  samePassword(_) {
     if (password.text != passwordCofirm.text) {
       confirmPasswordError = true;
     } else {
@@ -35,6 +34,39 @@ class _SignUpScreenState extends State<SignUpScreen> {
       emailError = true;
     }
     setState(() {});
+  }
+
+  signUp(String email, name, password) async {
+    if (emailError || passwordError || confirmPasswordError) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("資料格式錯誤")));
+      }
+      return;
+    }
+    if (email.isEmpty || password.isEmpty || name.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("資料未填寫完整")));
+      }
+      return;
+    }
+    bool success = await UserTable.signUp(
+        UserSchema(email: email, name: name, password: password));
+    if (!success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("註冊失敗email已被註冊"),
+        ));
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("註冊成功"),
+        ));
+        context.go("/sign-in");
+      }
+    }
   }
 
   @override
@@ -54,13 +86,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ],
             ),
-            SizedBox(height: 20),
+            Sh(h: 20),
             TextField(
                 controller: name,
                 decoration: InputDecoration(
                   labelText: "暱稱",
                 )),
-            SizedBox(height: 20),
+            Sh(h: 20),
             TextField(
                 controller: email,
                 onChanged: checkEmail,
@@ -68,7 +100,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   errorText: emailError ? "Email格式錯誤" : null,
                   labelText: "帳號(Email)",
                 )),
-            SizedBox(height: 10),
+            Sh(h: 10),
             TextField(
                 controller: password,
                 obscureText: hidePassword,
@@ -87,7 +119,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         });
                       }),
                 )),
-            SizedBox(height: 10),
+            Sh(h: 10),
             TextField(
                 controller: passwordCofirm,
                 obscureText: hideConfirmPassword,
@@ -106,7 +138,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         });
                       }),
                 )),
-            SizedBox(height: 50),
+            Sh(h: 20),
             ElevatedButton(
                 style: ButtonStyle(
                     backgroundColor: WidgetStateProperty.all(Colors.blue),
@@ -114,7 +146,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     shape: WidgetStateProperty.all(RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)))),
                 onPressed: () {
-                  context.go("/sign-in");
+                  signUp(email.text, name.text, password.text);
                 },
                 child: Text("註冊"))
           ],

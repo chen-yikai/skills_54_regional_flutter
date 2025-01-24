@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:skills_54_regional_flutter/db.dart';
+import 'package:skills_54_regional_flutter/util.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -10,6 +13,48 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   var hidePassword = true;
+  var email = TextEditingController(), password = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    checkRememberAuth();
+  }
+
+  Future<void> checkRememberAuth() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('signIn') ?? false) {
+      if (mounted) context.go('/home');
+    }
+  }
+
+  Future<void> savePrefs() async {
+    String name = await UserTable.selectName(email.text);
+    await SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('email', email.text);
+      prefs.setBool('signIn', true);
+      prefs.setString('name', name);
+    });
+  }
+
+  Future<void> signIn() async {
+    final auth = await UserTable.auth(email.text, password.text);
+    if (auth) {
+      savePrefs();
+      await UserTable.selectName(email.text);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("登入成功")));
+        context.go('/home');
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("帳號或密碼錯誤")));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,14 +70,16 @@ class _SignInScreenState extends State<SignInScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 50),
+            Sh(h: 50),
             TextField(
+              controller: email,
               decoration: InputDecoration(
                 labelText: "帳號(Email)",
               ),
             ),
-            SizedBox(height: 20),
+            Sh(h: 20),
             TextField(
+              controller: password,
               obscureText: hidePassword,
               obscuringCharacter: '*',
               decoration: InputDecoration(
@@ -47,12 +94,12 @@ class _SignInScreenState extends State<SignInScreen> {
                     }),
               ),
             ),
-            SizedBox(height: 20),
+            Sh(h: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
-                    onPressed: () {},
+                    onPressed: signIn,
                     style: ButtonStyle(
                       backgroundColor: WidgetStateProperty.all(Colors.blue),
                       foregroundColor: WidgetStateProperty.all(Colors.white),
@@ -71,9 +118,9 @@ class _SignInScreenState extends State<SignInScreen> {
                     context.go('/sign-up');
                   },
                   child: Text("註冊帳號"),
-                )
+                ),
               ],
-            )
+            ),
           ],
         ),
       ),
