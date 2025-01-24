@@ -12,8 +12,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final searchInput = TextEditingController();
   String? name = '';
   String? email = '';
+  final List<String> items =
+      List<String>.generate(20, (index) => "Item $index");
+
   @override
   void initState() {
     super.initState();
@@ -58,8 +62,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.go("/add");
+        },
+        child: Icon(Icons.add),
+      ),
       appBar: AppBar(
         title: Text('我的密碼庫'),
+        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.more_vert))],
       ),
       drawer: Drawer(
           child: SafeArea(
@@ -108,8 +119,133 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       )),
-      body: Center(
-        child: Text('主頁面'),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.all(Radius.circular(50)),
+              ),
+              child: TextField(
+                onChanged: (value) {
+                  setState(() {
+                    searchInput.text = value;
+                  });
+                },
+                controller: searchInput,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: '搜尋',
+                  prefixIcon: Icon(Icons.search),
+                  suffixIcon: searchInput.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear),
+                          onPressed: () {
+                            searchInput.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text('我的最愛'),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Colors.grey, width: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              title: Text(items[index]),
+                              subtitle: Text('Subtitle $index'),
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Tapped on ${items[index]}'),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey, width: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Text('其他項目'),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Colors.grey, width: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              title: Text(items[index]),
+                              subtitle: Text('Subtitle $index'),
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Tapped on ${items[index]}'),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

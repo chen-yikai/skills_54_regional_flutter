@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -55,14 +56,56 @@ class PasswordSchema {
   }
 }
 
-class UserTable {
-  static Database? db;
+Future<Database> init() async {
+  final directory = await getApplicationDocumentsDirectory();
+  final path = join(directory.path, 'app.db');
+  return await openDatabase(
+    path,
+    version: 1,
+    onCreate: (db, version) async {
+      await db.execute('''
+        CREATE TABLE users(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT,
+          name TEXT,
+          password TEXT,
+          collections TEXT DEFAULT ""
+          )
+        ''');
+      await db.execute('''
+          CREATE TABLE passwords(
+            createdAt INTEGER PRIMARY KEY,
+            name TEXT,
+            user TEXT,
+            password TEXT,
+            website TEXT,
+            favorite INTEGER
+            )
+          ''');
+    },
+  );
+}
 
-  static Future<Database> connect() async {
-    db ??= await init();
-    return db!;
+Future<Database> connect() async {
+  Database db = await init();
+  return db;
+}
+
+class PasswordTable {
+  static Future<void> get() async {
+    final db = await connect();
+    List<Map<String, dynamic>> maps =
+        await db.rawQuery('SELECT * FROM passwords');
+    debugPrint(maps.toString());
   }
 
+  static Future add(PasswordSchema password) async {
+    final db = await connect();
+    await db.insert("passwords", password.toMap());
+  }
+}
+
+class UserTable {
   static Future<bool> signUp(UserSchema user) async {
     final db = await connect();
     List<Map<String, dynamic>> sameUser =
@@ -93,20 +136,5 @@ class UserTable {
   static Future<void> delete(String email) async {
     final db = await connect();
     await db.execute('DELETE FROM users WHERE email = ?', [email]);
-  }
-
-  static Future<Database> init() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final path = join(directory.path, 'app.db');
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, version) async {
-        await db.execute(
-            'CREATE TABLE users(id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, name TEXT, password TEXT, collections TEXT DEFAULT "")');
-        await db.execute(
-            'CREATE TABLE passwords(createdAt INTEGER PRIMARY KEY, name TEXT, user TEXT, password TEXT, website TEXT, favorite INTEGER)');
-      },
-    );
   }
 }
