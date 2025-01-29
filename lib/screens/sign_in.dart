@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skills_54_regional_flutter/db.dart';
+import 'package:skills_54_regional_flutter/screens/home.dart';
+import 'package:skills_54_regional_flutter/screens/sign_up.dart';
 import 'package:skills_54_regional_flutter/util.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -24,7 +26,10 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> checkRememberAuth() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('signIn') ?? false) {
-      if (mounted) context.go('/home');
+      if (mounted) {
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HomeScreen()));
+      }
     }
   }
 
@@ -45,7 +50,8 @@ class _SignInScreenState extends State<SignInScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text("登入成功")));
-        context.go('/home');
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HomeScreen()));
       }
     } else {
       if (mounted) {
@@ -115,7 +121,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       shape: WidgetStateProperty.all(RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)))),
                   onPressed: () {
-                    context.go('/sign-up');
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => SignUpScreen()));
                   },
                   child: Text("註冊帳號"),
                 ),

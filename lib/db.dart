@@ -93,7 +93,8 @@ Future<Database> connect() async {
 }
 
 class PasswordTable {
-  static Future<List<PasswordSchema>> get() async {
+  static Future<List<PasswordSchema>> get(
+      String search, String sortBy, bool isAsc) async {
     final db = await connect();
     String email = "";
     var prefs = await SharedPreferences.getInstance();
@@ -101,8 +102,12 @@ class PasswordTable {
     final collections = await db
         .rawQuery('SELECT collections FROM users WHERE email = ?', [email]);
     final String collectionsList = collections[0]["collections"].toString();
-    List<Map<String, dynamic>> maps = await db.rawQuery(
-        'SELECT * FROM passwords WHERE createdAt IN ($collectionsList)');
+    List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT * FROM passwords 
+        WHERE createdAt IN ($collectionsList)
+        AND (name LIKE "%$search%" OR user LIKE "%$search%") 
+        ORDER BY ${sortBy == "createdAt" ? "createdAt" : "name"} ${isAsc ? "ASC" : "DESC"}
+        ''');
     return List.generate(maps.length, (index) {
       return PasswordSchema(
         createdAt: maps[index]['createdAt'],

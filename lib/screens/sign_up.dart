@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skills_54_regional_flutter/db.dart';
+import 'package:skills_54_regional_flutter/screens/sign_in.dart';
 import 'package:skills_54_regional_flutter/util.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -64,7 +65,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("註冊成功"),
         ));
-        context.go("/sign-in");
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => SignInScreen()));
       }
     }
   }

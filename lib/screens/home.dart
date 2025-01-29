@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skills_54_regional_flutter/db.dart';
 import 'package:skills_54_regional_flutter/screens/password/add.dart';
 import 'package:skills_54_regional_flutter/screens/password/view.dart';
+import 'package:skills_54_regional_flutter/screens/sign_in.dart';
 import 'package:skills_54_regional_flutter/util.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -33,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> getPassword() async {
-    passwords = await PasswordTable.get();
+    passwords = await PasswordTable.get(searchInput.text, "createdAt", true);
     setState(() {});
   }
 
@@ -100,7 +101,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       SharedPreferences.getInstance().then((prefs) {
                         prefs.clear();
                       });
-                      context.go('/sign-in');
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => SignInScreen()));
                     });
                   },
                   text: "登出"),
@@ -112,7 +116,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       SharedPreferences.getInstance().then((prefs) {
                         prefs.clear();
                       });
-                      context.go('/sign-in');
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => SignInScreen()));
                     });
                   },
                   text: "刪除帳號",
@@ -140,7 +147,38 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         title: Text('我的密碼庫'),
-        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.more_vert))],
+        actions: [
+          PopupMenuButton(
+              itemBuilder: (context) => [
+                    PopupMenuItem(
+                      onTap: () {},
+                      child: Row(
+                        children: [
+                          Icon(Icons.check),
+                          Text('自訂排序'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      onTap: () {},
+                      child: Row(
+                        children: [
+                          Icon(Icons.check),
+                          Text('依名稱排序'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      onTap: () {},
+                      child: Row(
+                        children: [
+                          Icon(Icons.check),
+                          Text('依建立時間排序'),
+                        ],
+                      ),
+                    ),
+                  ])
+        ],
       ),
       drawer: drawer(),
       body: Column(
@@ -156,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onChanged: (value) {
                   setState(() {
                     searchInput.text = value;
+                    getPassword();
                   });
                 },
                 controller: searchInput,
@@ -169,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onPressed: () {
                             searchInput.clear();
                             setState(() {});
+                            getPassword();
                           },
                         )
                       : null,
