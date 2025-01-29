@@ -51,8 +51,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
       return;
     }
-    bool success = await UserTable.signUp(
-        UserSchema(email: email, name: name, password: password));
+    bool success = await UserTable.signUp(UserSchema(
+        email: email, name: name, password: password, collections: ""));
     if (!success) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

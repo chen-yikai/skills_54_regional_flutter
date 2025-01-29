@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 class UserSchema {
@@ -34,7 +35,7 @@ class PasswordSchema {
   final String user;
   final String password;
   final String website;
-  final String favorite;
+  final int favorite;
 
   PasswordSchema(
       {this.createdAt,
@@ -92,16 +93,49 @@ Future<Database> connect() async {
 }
 
 class PasswordTable {
-  static Future<void> get() async {
+  static Future<List<PasswordSchema>> get() async {
     final db = await connect();
-    List<Map<String, dynamic>> maps =
-        await db.rawQuery('SELECT * FROM passwords');
-    debugPrint(maps.toString());
+    String email = "";
+    var prefs = await SharedPreferences.getInstance();
+    email = prefs.getString('email')!;
+    final collections = await db
+        .rawQuery('SELECT collections FROM users WHERE email = ?', [email]);
+    final String collectionsList = collections[0]["collections"].toString();
+    List<Map<String, dynamic>> maps = await db.rawQuery(
+        'SELECT * FROM passwords WHERE createdAt IN ($collectionsList)');
+    return List.generate(maps.length, (index) {
+      return PasswordSchema(
+        createdAt: maps[index]['createdAt'],
+        name: maps[index]['name'],
+        user: maps[index]['user'],
+        password: maps[index]['password'],
+        website: maps[index]['website'],
+        favorite: maps[index]['favorite'],
+      );
+    });
   }
 
-  static Future add(PasswordSchema password) async {
+  static Future<PasswordSchema> getSingle(int id) async {
     final db = await connect();
-    await db.insert("passwords", password.toMap());
+    List<Map<String, dynamic>> maps =
+        await db.rawQuery('SELECT * FROM passwords WHERE createdAt = $id');
+    return PasswordSchema(
+      createdAt: maps[0]['createdAt'],
+      name: maps[0]['name'],
+      user: maps[0]['user'],
+      password: maps[0]['password'],
+      website: maps[0]['website'],
+      favorite: maps[0]['favorite'],
+    );
+  }
+
+  static Future<void> add(PasswordSchema password) async {
+    final db = await connect();
+    String email = '';
+    var prefs = await SharedPreferences.getInstance();
+    email = prefs.getString('email')!;
+    UserTable.updateCollections(email, password.createdAt!);
+    db.insert("passwords", password.toMap());
   }
 }
 
@@ -116,6 +150,17 @@ class UserTable {
       user.toMap(),
     );
     return true;
+  }
+
+  static Future<void> updateCollections(String email, int collection) async {
+    final db = await connect();
+    List<Map<String, dynamic>> collectionsOldMap = await db
+        .rawQuery('SELECT collections FROM users WHERE email = ?', [email]);
+    String oldCollections = collectionsOldMap[0]['collections'];
+    await db.rawQuery('UPDATE users SET collections = ? WHERE email = ?', [
+      oldCollections == "" ? "$collection" : "$oldCollections,$collection",
+      email
+    ]);
   }
 
   static Future<String> selectName(String email) async {

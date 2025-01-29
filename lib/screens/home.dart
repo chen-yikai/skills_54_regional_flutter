@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skills_54_regional_flutter/db.dart';
+import 'package:skills_54_regional_flutter/screens/password/add.dart';
+import 'package:skills_54_regional_flutter/screens/password/view.dart';
 import 'package:skills_54_regional_flutter/util.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,13 +17,24 @@ class _HomeScreenState extends State<HomeScreen> {
   final searchInput = TextEditingController();
   String? name = '';
   String? email = '';
-  final List<String> items =
-      List<String>.generate(20, (index) => "Item $index");
+  List<PasswordSchema> passwords = [];
 
   @override
   void initState() {
     super.initState();
     getPrefs();
+    getPassword();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    getPassword();
+  }
+
+  Future<void> getPassword() async {
+    passwords = await PasswordTable.get();
+    setState(() {});
   }
 
   Future<void> getPrefs() async {
@@ -59,23 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.go("/add");
-        },
-        child: Icon(Icons.add),
-      ),
-      appBar: AppBar(
-        title: Text('我的密碼庫'),
-        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.more_vert))],
-      ),
-      drawer: Drawer(
-          child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 20),
+  drawer() {
+    return Drawer(
+        child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: SingleChildScrollView(
           child: Column(
             children: [
               Text(name ?? 'user', style: TextStyle(fontSize: 20)),
@@ -118,7 +120,29 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      )),
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        onPressed: () {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (context) => AddPasswordScreen()));
+        },
+        child: Icon(Icons.add),
+      ),
+      appBar: AppBar(
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        title: Text('我的密碼庫'),
+        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.more_vert))],
+      ),
+      drawer: drawer(),
       body: Column(
         children: [
           Padding(
@@ -164,32 +188,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: Colors.grey, width: 0.2),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: Text(items[index]),
-                              subtitle: Text('Subtitle $index'),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Tapped on ${items[index]}'),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                  child: ListView(
+                    children: passwords.map((item) {
+                      if (item.favorite == 1) {
+                        return ListTile(
+                          title: Text(item.name),
+                          subtitle: Text(item.user),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      ViewScreen(id: item.createdAt))),
+                        );
+                      } else {
+                        return Container();
+                      }
+                    }).toList(),
                   ),
                 ),
               ],
@@ -214,32 +228,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: Colors.grey, width: 0.2),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: Text(items[index]),
-                              subtitle: Text('Subtitle $index'),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Tapped on ${items[index]}'),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                  child: ListView(
+                    children: passwords.map((item) {
+                      if (item.favorite == 0) {
+                        return ListTile(
+                          title: Text(item.name),
+                          subtitle: Text(item.user),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      ViewScreen(id: item.createdAt))),
+                        );
+                      } else {
+                        return Container();
+                      }
+                    }).toList(),
                   ),
                 ),
               ],

@@ -5,6 +5,10 @@ class Utils {
       RegExp(r'^(?=.{1,29}$)[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
 }
 
+bool dbIsReady = false;
+
+TextStyle grayText = TextStyle(color: Colors.black45, fontSize: 15);
+
 class Sw extends StatelessWidget {
   final double w;
   const Sw({super.key, this.w = 20});

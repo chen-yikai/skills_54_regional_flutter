@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:skills_54_regional_flutter/screens/home.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,7 +18,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> navtohome() async {
     await Future.delayed(const Duration(seconds: 0));
-    if (mounted) context.go('/sign-in');
+    // if (mounted) context.go('/sign-in');
+    if (mounted) {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => HomeScreen()));
+    }
   }
 
   @override
