@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skills_54_regional_flutter/db.dart';
 import 'package:skills_54_regional_flutter/screens/password/add.dart';
@@ -27,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
     getPassword();
   }
 
+  bool isRun = true;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -133,6 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    getPassword();
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.teal,

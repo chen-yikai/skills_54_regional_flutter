@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:skills_54_regional_flutter/screens/home.dart';
+import 'package:skills_54_regional_flutter/screens/password/add.dart';
 import 'package:skills_54_regional_flutter/util.dart';
 import 'package:skills_54_regional_flutter/db.dart';
 
@@ -13,6 +16,9 @@ class ViewScreen extends StatefulWidget {
 class _ViewScreenState extends State<ViewScreen> {
   PasswordSchema passwords = PasswordSchema(
       createdAt: 0, name: "", user: "", password: "", website: "", favorite: 0);
+  bool isShowPassword = false;
+  String passwordText = "";
+  bool isFavorite = false;
   contentShow(String hint, String value, List<Widget>? right) {
     return Container(
       decoration: BoxDecoration(
@@ -24,7 +30,24 @@ class _ViewScreenState extends State<ViewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(hint, style: TextStyle(color: Colors.black54, fontSize: 11)),
-              Text(value, style: TextStyle(fontSize: 20, color: Colors.black12))
+              hint == "密碼" && isShowPassword
+                  ? RichText(
+                      text: TextSpan(
+                          children: passwordText
+                              .split('')
+                              .map((value) => TextSpan(
+                                  text: value,
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      color: RegExp(r'^[a-zA-Z]$')
+                                              .hasMatch(value)
+                                          ? Colors.black
+                                          : RegExp(r'^[0-9]$').hasMatch(value)
+                                              ? Colors.blue
+                                              : Colors.green)))
+                              .toList()))
+                  : Text(value,
+                      style: TextStyle(fontSize: 20, color: Colors.black12))
             ],
           ),
           Row(
@@ -35,8 +58,18 @@ class _ViewScreenState extends State<ViewScreen> {
     );
   }
 
+  Future<void> deleteData() async {
+    await PasswordTable.delete(passwords.createdAt!);
+    if (mounted) {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) => HomeScreen()));
+    }
+  }
+
   getData() async {
     passwords = await PasswordTable.getSingle(widget.id!);
+    isFavorite = passwords.favorite == 1 ? true : false;
+    passwordText = "*" * 8;
     setState(() {});
   }
 
@@ -55,7 +88,11 @@ class _ViewScreenState extends State<ViewScreen> {
           title: Text("檢視項目"),
           actions: [
             TextButton(
-                onPressed: () {},
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            AddPasswordScreen(isAdd: false, id: widget.id!))),
                 child: Text("編輯", style: TextStyle(color: Colors.white)))
           ],
         ),
@@ -67,19 +104,43 @@ class _ViewScreenState extends State<ViewScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    contentShow("項目名稱", passwords.name,
-                        [IconButton(onPressed: () {}, icon: Icon(Icons.star))]),
+                    contentShow("項目名稱", passwords.name, [
+                      IconButton(
+                          onPressed: () {
+                            isFavorite = !isFavorite;
+                            PasswordTable.updateFavorite(
+                                passwords.createdAt!, isFavorite);
+                            setState(() {});
+                          },
+                          icon:
+                              Icon(isFavorite ? Icons.star : Icons.star_border))
+                    ]),
                     contentShow("使用者名稱", passwords.name, [
                       IconButton(
                           onPressed: () {}, icon: Icon(Icons.content_copy))
                     ]),
-                    contentShow("密碼", passwords.password, [
+                    contentShow("密碼", passwordText, [
                       IconButton(
-                          onPressed: () {}, icon: Icon(Icons.visibility)),
+                          onPressed: () {
+                            isShowPassword = !isShowPassword;
+                            passwordText =
+                                isShowPassword ? passwords.password : '*' * 8;
+                            setState(() {});
+                          },
+                          icon: Icon(isShowPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility)),
                       IconButton(
-                          onPressed: () {}, icon: Icon(Icons.content_copy))
+                          onPressed: () {
+                            Clipboard.setData(
+                                ClipboardData(text: passwords.password));
+                          },
+                          icon: Icon(Icons.content_copy))
                     ]),
-                    contentShow("網址", passwords.website, []),
+                    GestureDetector(
+                      onTap: () {},
+                      child: contentShow("網址", passwords.website, []),
+                    ),
                     Sh(h: 20),
                     Text(
                         "建立時間: ${DateTime.fromMillisecondsSinceEpoch(passwords.createdAt!).toString().split(".")[0]}")
@@ -92,7 +153,19 @@ class _ViewScreenState extends State<ViewScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () => showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                  title: Text("確定要刪除此密碼項目嗎？"),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text("取消")),
+                                    TextButton(
+                                        onPressed: deleteData,
+                                        child: Text("確定"))
+                                  ],
+                                )),
                         style: ButtonStyle(
                             backgroundColor: WidgetStatePropertyAll(Colors.red),
                             shape: WidgetStatePropertyAll(

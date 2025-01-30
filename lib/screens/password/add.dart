@@ -5,13 +5,16 @@ import 'package:skills_54_regional_flutter/screens/password/generator.dart';
 import 'package:skills_54_regional_flutter/util.dart';
 
 class AddPasswordScreen extends StatefulWidget {
-  const AddPasswordScreen({super.key});
+  final bool isAdd;
+  final int id;
+  const AddPasswordScreen({super.key, this.isAdd = true, this.id = 0});
 
   @override
   State<AddPasswordScreen> createState() => _AddPasswordScreenState();
 }
 
 class _AddPasswordScreenState extends State<AddPasswordScreen> {
+  PasswordSchema? editPasswordData;
   final formKey = GlobalKey<FormState>();
   final name = TextEditingController(),
       user = TextEditingController(),
@@ -21,23 +24,45 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
   var isVisibile = false;
 
   Future<void> save() async {
-    int timestamp = DateTime.now().millisecondsSinceEpoch;
-    await PasswordTable.add(PasswordSchema(
-        createdAt: timestamp,
-        name: name.text,
-        user: user.text,
-        password: password.text,
-        website: website.text,
-        favorite: isFav ? 1 : 0));
+    if (widget.isAdd) {
+      int timestamp = DateTime.now().millisecondsSinceEpoch;
+      await PasswordTable.add(PasswordSchema(
+          createdAt: timestamp,
+          name: name.text,
+          user: user.text,
+          password: password.text,
+          website: website.text,
+          favorite: isFav ? 1 : 0));
+    } else {
+      int? timestamp = editPasswordData!.createdAt;
+      await PasswordTable.update(PasswordSchema(
+          createdAt: timestamp!,
+          name: name.text,
+          user: user.text,
+          password: password.text,
+          website: website.text,
+          favorite: isFav ? 1 : 0));
+    }
     if (mounted) {
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => HomeScreen()));
     }
   }
 
+  Future<void> editPassword() async {
+    editPasswordData = await PasswordTable.getSingle(widget.id);
+    name.text = editPasswordData!.name;
+    user.text = editPasswordData!.user;
+    password.text = editPasswordData!.password;
+    website.text = editPasswordData!.website;
+    isFav = editPasswordData!.favorite == 1;
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    if (!widget.isAdd) editPassword();
   }
 
   void bottomSheet() async {
@@ -51,7 +76,7 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
   Future<void> goHome() async {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('已新增項目'),
+        content: Text(widget.isAdd ? '已新增項目' : '以更新項目'),
       ));
       Navigator.push(
           context, MaterialPageRoute(builder: (context) => HomeScreen()));
@@ -66,12 +91,11 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
           appBar: AppBar(
             backgroundColor: Colors.teal,
             foregroundColor: Colors.white,
-            title: Text('新增項目'),
+            title: Text(widget.isAdd ? '新增項目' : '編輯項目'),
             actions: [
               TextButton(
                   onPressed: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => HomeScreen()));
+                    Navigator.pop(context);
                   },
                   child: Text(
                     '取消',

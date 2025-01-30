@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -120,6 +119,23 @@ class PasswordTable {
     });
   }
 
+  static Future<void> delete(int id) async {
+    final db = await connect();
+    await db.execute('DELETE FROM passwords WHERE createdAt = $id');
+  }
+
+  static Future<void> update(PasswordSchema password) async {
+    final db = await connect();
+    await db.update('passwords', password.toMap(),
+        where: 'createdAt = ?', whereArgs: [password.createdAt]);
+  }
+
+  static Future<void> updateFavorite(int id, bool isfavorite) async {
+    final db = await connect();
+    await db.execute(
+        'UPDATE passwords SET favorite = ${isfavorite ? 1 : 0} WHERE createdAt = $id');
+  }
+
   static Future<PasswordSchema> getSingle(int id) async {
     final db = await connect();
     List<Map<String, dynamic>> maps =
@@ -140,7 +156,7 @@ class PasswordTable {
     var prefs = await SharedPreferences.getInstance();
     email = prefs.getString('email')!;
     UserTable.updateCollections(email, password.createdAt!);
-    db.insert("passwords", password.toMap());
+    await db.insert("passwords", password.toMap());
   }
 }
 
