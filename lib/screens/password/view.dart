@@ -119,7 +119,9 @@ class _ViewScreenState extends State<ViewScreen> {
                     ]),
                     contentShow("使用者名稱", passwords.name, [
                       IconButton(
-                          onPressed: () {}, icon: Icon(Icons.content_copy))
+                          onPressed: () => Clipboard.setData(
+                              ClipboardData(text: passwords.name)),
+                          icon: Icon(Icons.content_copy))
                     ]),
                     contentShow("密碼", passwordText, [
                       IconButton(

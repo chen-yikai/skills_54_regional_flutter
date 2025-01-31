@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -97,26 +98,29 @@ class PasswordTable {
     final db = await connect();
     String email = "";
     var prefs = await SharedPreferences.getInstance();
-    email = prefs.getString('email')!;
-    final collections = await db
-        .rawQuery('SELECT collections FROM users WHERE email = ?', [email]);
-    final String collectionsList = collections[0]["collections"].toString();
-    List<Map<String, dynamic>> maps = await db.rawQuery('''
+    if (prefs.containsKey('email')) {
+      email = prefs.getString('email')!;
+      final collections = await db
+          .rawQuery('SELECT collections FROM users WHERE email = ?', [email]);
+      final String collectionsList = collections[0]["collections"].toString();
+      List<Map<String, dynamic>> maps = await db.rawQuery('''
         SELECT * FROM passwords 
         WHERE createdAt IN ($collectionsList)
         AND (name LIKE "%$search%" OR user LIKE "%$search%") 
         ORDER BY ${sortBy == "createdAt" ? "createdAt" : "name"} ${isAsc ? "ASC" : "DESC"}
         ''');
-    return List.generate(maps.length, (index) {
-      return PasswordSchema(
-        createdAt: maps[index]['createdAt'],
-        name: maps[index]['name'],
-        user: maps[index]['user'],
-        password: maps[index]['password'],
-        website: maps[index]['website'],
-        favorite: maps[index]['favorite'],
-      );
-    });
+      return List.generate(maps.length, (index) {
+        return PasswordSchema(
+          createdAt: maps[index]['createdAt'],
+          name: maps[index]['name'],
+          user: maps[index]['user'],
+          password: maps[index]['password'],
+          website: maps[index]['website'],
+          favorite: maps[index]['favorite'],
+        );
+      });
+    }
+    return [];
   }
 
   static Future<void> delete(int id) async {
@@ -150,13 +154,18 @@ class PasswordTable {
     );
   }
 
-  static Future<void> add(PasswordSchema password) async {
+  static Future<bool> add(PasswordSchema password) async {
     final db = await connect();
     String email = '';
     var prefs = await SharedPreferences.getInstance();
     email = prefs.getString('email')!;
     UserTable.updateCollections(email, password.createdAt!);
-    await db.insert("passwords", password.toMap());
+    try {
+      await db.insert("passwords", password.toMap());
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }
 
