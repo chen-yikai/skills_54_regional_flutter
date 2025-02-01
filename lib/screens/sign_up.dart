@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:skills_54_regional_flutter/db.dart';
 import 'package:skills_54_regional_flutter/screens/sign_in.dart';
 import 'package:skills_54_regional_flutter/util.dart';
@@ -53,7 +52,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
     bool success = await UserTable.signUp(UserSchema(
-        email: email, name: name, password: password, collections: ""));
+        email: email,
+        name: name,
+        password: password,
+        collections: "",
+        customOrder: ""));
     if (!success) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

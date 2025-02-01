@@ -4,7 +4,6 @@ import 'package:skills_54_regional_flutter/screens/home.dart';
 import 'package:skills_54_regional_flutter/screens/password/add.dart';
 import 'package:skills_54_regional_flutter/util.dart';
 import 'package:skills_54_regional_flutter/db.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class ViewScreen extends StatefulWidget {
@@ -146,9 +145,11 @@ class _ViewScreenState extends State<ViewScreen> {
                         if (await canLaunchUrlString(passwords.website)) {
                           await launchUrlString(passwords.website);
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text("無法開啟網址"),
-                          ));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text("無法開啟網址"),
+                            ));
+                          }
                         }
                       },
                       child: contentShow("網址", passwords.website, []),

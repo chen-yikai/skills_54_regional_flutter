@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:skills_54_regional_flutter/screens/home.dart';
 import 'package:sqflite/sqflite.dart';
 
 class UserSchema {
@@ -10,13 +10,15 @@ class UserSchema {
   final String name;
   final String password;
   final String? collections;
+  final String? customOrder;
 
   UserSchema(
       {this.id,
       required this.email,
       required this.name,
       required this.password,
-      this.collections});
+      this.collections,
+      this.customOrder});
 
   Map<String, dynamic> toMap() {
     return {
@@ -24,7 +26,8 @@ class UserSchema {
       'email': email,
       'name': name,
       'password': password,
-      'collections': collections
+      'collections': collections,
+      'customOrder': customOrder
     };
   }
 }
@@ -70,7 +73,8 @@ Future<Database> init() async {
           email TEXT,
           name TEXT,
           password TEXT,
-          collections TEXT DEFAULT ""
+          collections TEXT DEFAULT "",
+          customOrder TEXT DEFAULT ""
           )
         ''');
       await db.execute('''
@@ -94,7 +98,7 @@ Future<Database> connect() async {
 
 class PasswordTable {
   static Future<List<PasswordSchema>> get(
-      String search, String sortBy, bool isAsc) async {
+      String search, SortBy sortBy, bool isAsc) async {
     final db = await connect();
     String email = "";
     var prefs = await SharedPreferences.getInstance();
@@ -103,12 +107,32 @@ class PasswordTable {
       final collections = await db
           .rawQuery('SELECT collections FROM users WHERE email = ?', [email]);
       final String collectionsList = collections[0]["collections"].toString();
-      List<Map<String, dynamic>> maps = await db.rawQuery('''
+      List<Map<String, dynamic>> maps = [];
+      if (sortBy != SortBy.custom) {
+        maps = await db.rawQuery('''
         SELECT * FROM passwords 
         WHERE createdAt IN ($collectionsList)
         AND (name LIKE "%$search%" OR user LIKE "%$search%") 
-        ORDER BY ${sortBy == "createdAt" ? "createdAt" : "name"} ${isAsc ? "ASC" : "DESC"}
+        ORDER BY ${sortBy == SortBy.createdAt ? "createdAt" : "name"} ${isAsc ? "ASC" : "DESC"}
         ''');
+      } else {
+        final customOrder = await UserTable.getCustomOrder();
+        String customOrderString = "";
+        for (var i = 0; i < customOrder.length; i++) {
+          customOrderString +=
+              customOrder[i] + (i == customOrder.length - 1 ? "" : ",");
+        }
+        maps = await db.rawQuery('''
+        SELECT * FROM passwords 
+        WHERE createdAt IN ($collectionsList)
+        AND (name LIKE "%$search%" OR user LIKE "%$search%") 
+        ORDER BY
+          CASE createdAt
+            ${customOrderString.split(",").asMap().entries.map((item) => "WHEN '${item.value}' THEN ${item.key}").join(" ")}
+          END
+        ''');
+      }
+
       return List.generate(maps.length, (index) {
         return PasswordSchema(
           createdAt: maps[index]['createdAt'],
@@ -126,6 +150,8 @@ class PasswordTable {
   static Future<void> delete(int id) async {
     final db = await connect();
     await db.execute('DELETE FROM passwords WHERE createdAt = $id');
+    await db.execute(
+        'UPDATE users SET collections = REPLACE(collections, "$id,", "")');
   }
 
   static Future<void> update(PasswordSchema password) async {
@@ -170,6 +196,26 @@ class PasswordTable {
 }
 
 class UserTable {
+  static Future<List<String>> getCustomOrder() async {
+    var prefs = await SharedPreferences.getInstance();
+    final db = await connect();
+    final List<Map<String, dynamic>> maps = await db.rawQuery(
+        'SELECT customOrder FROM users WHERE email = ?',
+        [prefs.getString('email')]);
+    return maps[0]['customOrder'].toString().split(',');
+  }
+
+  static Future<void> setCustomOrder(List<String> list) async {
+    var prefs = await SharedPreferences.getInstance();
+    final db = await connect();
+    String orderList = "";
+    for (var i = 0; i < list.length; i++) {
+      orderList += list[i] + (i == list.length - 1 ? "" : ",");
+    }
+    await db.execute('UPDATE users SET customOrder = ? WHERE email = ?',
+        [orderList, prefs.getString('email')]);
+  }
+
   static Future<bool> signUp(UserSchema user) async {
     final db = await connect();
     List<Map<String, dynamic>> sameUser =

@@ -20,13 +20,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
   final searchInput = TextEditingController();
+  final List<String> customOrderList = [];
   String? name = '';
   String? email = '';
   List<PasswordSchema> passwords = [];
   SortBy sortingMethod = SortBy.createdAt;
   bool isAsc = true;
-  // create a enum for sorting
+  final exportFileName = TextEditingController();
 
   @override
   void initState() {
@@ -36,16 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
     initSort();
   }
 
-  bool isRun = true;
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    getPassword();
-  }
-
   Future<void> getPassword() async {
-    passwords = await PasswordTable.get(
-        searchInput.text, sortingMethod.toString(), isAsc);
+    passwords = await PasswordTable.get(searchInput.text, sortingMethod, isAsc);
     setState(() {});
   }
 
@@ -87,10 +81,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> exportJsonData() async {
     Navigator.pop(context);
     final directory = await getApplicationDocumentsDirectory();
-    final filePath = '${directory.path}/data.json';
+    final filePath = '${directory.path}/${exportFileName.text}.json';
 
     final jsonList = passwords.map((password) => password.toMap()).toList();
-
     final jsonString = jsonEncode(jsonList);
 
     final file = File(filePath);
@@ -105,43 +98,33 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> importJsonData() async {
+  Future<List> getJsonFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final files = directory
+        .listSync()
+        .where((element) => element.path.endsWith('.json'))
+        .toList();
+    final fileNames = files.map((e) => e.path.split('/').last).toList();
+    return fileNames;
+  }
+
+  Future<void> importJsonData(String filename) async {
     Navigator.pop(context);
     final directory = await getApplicationDocumentsDirectory();
-    final filePath = '${directory.path}/data.json';
+    final filePath = '${directory.path}/$filename';
 
     final file = File(filePath);
     final jsonString = await file.readAsString();
 
     final jsonData = jsonDecode(jsonString) as List;
-    try {
-      for (final item in jsonData) {
-        bool res = await PasswordTable.add(PasswordSchema(
-            createdAt: item["createdAt"],
-            name: item["name"],
-            user: item["user"],
-            password: item["password"],
-            website: item["website"],
-            favorite: item["favorite"]));
-        if (!res) {
-          throw Exception();
-        }
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('匯入成功'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('匯入失敗'),
-          ),
-        );
-      }
+    for (final item in jsonData) {
+      await PasswordTable.add(PasswordSchema(
+          createdAt: item["createdAt"],
+          name: item["name"],
+          user: item["user"],
+          password: item["password"],
+          website: item["website"],
+          favorite: item["favorite"]));
     }
   }
 
@@ -158,15 +141,83 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(email ?? 'user', style: TextStyle(fontSize: 20)),
               Sh(h: 20),
               Button(
-                press: () async {
-                  await exportJsonData();
+                press: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      exportFileName.clear();
+                      return AlertDialog(
+                        title: Text('匯出檔名'),
+                        content: Row(
+                          children: [
+                            Expanded(
+                                child: TextField(controller: exportFileName)),
+                            Text(
+                              '.json',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 20),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text('取消'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              if (exportFileName.text.isNotEmpty) {
+                                await exportJsonData();
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('請輸入檔名'),
+                                  ),
+                                );
+                              }
+                            },
+                            child: Text('確定'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
                 },
                 text: "匯出密碼",
               ),
               Sh(h: 10),
               Button(
                 press: () async {
-                  await importJsonData();
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: Text('匯入檔案'),
+                        content: FutureBuilder(
+                          future: getJsonFile(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              final fileNames = snapshot.data as List;
+                              return Column(
+                                children: fileNames
+                                    .map((fileName) => ListTile(
+                                          title: Text(fileName),
+                                          onTap: () async {
+                                            await importJsonData(fileName);
+                                          },
+                                        ))
+                                    .toList(),
+                              );
+                            } else {
+                              return CircularProgressIndicator();
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  );
                 },
                 text: "匯入密碼",
               ),
@@ -213,30 +264,49 @@ class _HomeScreenState extends State<HomeScreen> {
           (element) => element.toString() == prefs.getString('sortingMethod'),
           orElse: () => SortBy.createdAt);
       isAsc = prefs.getBool('isAsc') ?? true;
+      updateSort(sortingMethod);
       setState(() {});
     });
   }
 
-  updateSort(SortBy method) {
-    sortingMethod = method;
-    isAsc = !isAsc;
-    setState(() {});
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setString('sortingMethod', sortingMethod.toString());
-      prefs.setBool('isAsc', isAsc);
+  Future<void> updateCustomSort() async {
+    customOrderList.clear();
+    passwords.forEach((item) {
+      customOrderList.add(item.createdAt.toString());
     });
+    await UserTable.setCustomOrder(customOrderList);
+  }
+
+  Future<void> updateSort(SortBy method) async {
+    setState(() {
+      sortingMethod = method;
+      if (method != SortBy.custom) isAsc = !isAsc;
+    });
+    List<String> customCheck = await UserTable.getCustomOrder();
+    if (sortingMethod == SortBy.custom && customCheck.isEmpty) {
+      passwords =
+          await PasswordTable.get(searchInput.text, SortBy.createdAt, true);
+      setState(() {});
+    }
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('sortingMethod', method.toString());
+      if (method != SortBy.custom) prefs.setBool('isAsc', isAsc);
+    });
+
+    getPassword();
   }
 
   @override
   Widget build(BuildContext context) {
-    getPassword();
+    // getPassword();
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         onPressed: () {
           Navigator.push(context,
-              MaterialPageRoute(builder: (context) => AddPasswordScreen()));
+                  MaterialPageRoute(builder: (context) => AddPasswordScreen()))
+              .then((_) => getPassword());
         },
         child: Icon(Icons.add),
       ),
@@ -249,8 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
               itemBuilder: (context) => [
                     PopupMenuItem(
                       onTap: () {
-                        sortingMethod = SortBy.custom;
-                        setState(() {});
+                        updateSort(SortBy.custom);
                       },
                       child: InkWell(
                         child: Row(
@@ -378,22 +447,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 Expanded(
-                  child: ListView(
+                  child: ReorderableListView(
+                    buildDefaultDragHandles: sortingMethod == SortBy.custom,
                     children: passwords.map((item) {
                       if (item.favorite == 1) {
                         return ListTile(
+                          key: Key(item.createdAt.toString()),
                           title: Text(item.name),
                           subtitle: Text(item.user),
-                          onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      ViewScreen(id: item.createdAt))),
+                          onTap: () {
+                            Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            ViewScreen(id: item.createdAt)))
+                                .then((value) => getPassword());
+                          },
                         );
                       } else {
-                        return Container();
+                        return Container(
+                          key: Key(item.createdAt.toString()),
+                        );
                       }
                     }).toList(),
+                    onReorder: (int oldIndex, int newIndex) {
+                      setState(() {
+                        final item = passwords.removeAt(oldIndex);
+                        if (newIndex > oldIndex) newIndex--;
+                        passwords.insert(newIndex, item);
+                      });
+                      updateCustomSort();
+                    },
                   ),
                 ),
               ],
@@ -418,22 +502,35 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Expanded(
-                  child: ListView(
+                  child: ReorderableListView(
+                    buildDefaultDragHandles: sortingMethod == SortBy.custom,
                     children: passwords.map((item) {
                       if (item.favorite == 0) {
                         return ListTile(
+                          key: Key(item.createdAt.toString()),
                           title: Text(item.name),
                           subtitle: Text(item.user),
                           onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      ViewScreen(id: item.createdAt))),
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          ViewScreen(id: item.createdAt)))
+                              .then((value) => getPassword()),
                         );
                       } else {
-                        return Container();
+                        return Container(
+                          key: Key(item.createdAt.toString()),
+                        );
                       }
                     }).toList(),
+                    onReorder: (int oldIndex, int newIndex) {
+                      setState(() {
+                        final item = passwords.removeAt(oldIndex);
+                        if (newIndex > oldIndex) newIndex--;
+                        passwords.insert(newIndex, item);
+                      });
+                      updateCustomSort();
+                    },
                   ),
                 ),
               ],

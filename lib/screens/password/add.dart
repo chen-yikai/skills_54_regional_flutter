@@ -7,6 +7,7 @@ import 'package:skills_54_regional_flutter/util.dart';
 class AddPasswordScreen extends StatefulWidget {
   final bool isAdd;
   final int id;
+
   const AddPasswordScreen({super.key, this.isAdd = true, this.id = 0});
 
   @override
